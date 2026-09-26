@@ -41,111 +41,215 @@ st.set_page_config(
 # ============================================================
 st.markdown("""
 <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap');
+    * { font-family: 'Inter', 'Pyidaungsu', 'Myanmar Text', sans-serif; }
     .stApp {
-        background: linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%);
+        background: radial-gradient(circle at 20% 20%, #1a1a3e 0%, #0a0a1f 50%, #000000 100%);
         color: #ffffff;
     }
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
     header {visibility: hidden;}
-    .main-title {
-        font-size: 2.5rem;
+    .hero-container {
+        text-align: center;
+        padding: 40px 20px 20px 20px;
+    }
+    .hero-title {
+        font-size: 3rem;
         font-weight: 900;
-        background: linear-gradient(90deg, #667eea, #764ba2, #f093fb, #f5576c);
+        background: linear-gradient(135deg, #ff6b9d 0%, #c66bff 50%, #6ba8ff 100%);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
         background-clip: text;
-        text-align: center;
-        margin-bottom: 0.3rem;
+        margin: 0;
+        letter-spacing: -2px;
+        line-height: 1.1;
+        filter: drop-shadow(0 0 30px rgba(198, 107, 255, 0.4));
     }
-    .sub-title {
-        text-align: center;
-        color: #a0a0c0;
-        font-size: 1rem;
-        margin-bottom: 1.5rem;
+    .hero-sub {
+        color: #8888aa;
+        font-size: 1.05rem;
+        margin-top: 12px;
+        letter-spacing: 0.5px;
     }
-    .section-header {
-        background: linear-gradient(90deg, rgba(102,126,234,0.15), rgba(118,75,162,0.05));
-        border-left: 4px solid #667eea;
-        padding: 12px 18px;
-        border-radius: 8px;
-        margin: 20px 0 15px 0;
-        font-size: 1.2rem;
-        font-weight: 700;
-        color: #e0e0ff;
+    .hero-line {
+        width: 100px;
+        height: 3px;
+        background: linear-gradient(90deg, transparent, #c66bff, transparent);
+        margin: 20px auto 0 auto;
+        border-radius: 3px;
     }
-    .pill {
-        display: inline-block;
-        background: linear-gradient(90deg, #667eea, #764ba2);
-        color: white;
-        padding: 6px 14px;
+    .status-row {
+        display: flex;
+        justify-content: center;
+        gap: 12px;
+        flex-wrap: wrap;
+        margin: 25px 0;
+    }
+    .status-pill {
+        background: rgba(255, 255, 255, 0.05);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        padding: 8px 18px;
         border-radius: 50px;
-        font-size: 0.85rem;
+        font-size: 0.82rem;
         font-weight: 600;
-        margin: 4px;
+        color: #ccccdd;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        transition: all 0.3s;
     }
-    .pill-green { background: linear-gradient(90deg, #11998e, #38ef7d); }
-    .pill-red { background: linear-gradient(90deg, #eb3349, #f45c43); }
-    .pill-orange { background: linear-gradient(90deg, #f2994a, #f2c94c); }
-    .info-box {
-        background: linear-gradient(90deg, rgba(102,126,234,0.15), rgba(118,75,162,0.15));
-        border-left: 4px solid #667eea;
-        padding: 14px 18px;
-        border-radius: 10px;
-        margin: 12px 0;
-        color: #d0d0ff;
+    .status-pill:hover {
+        border-color: rgba(198, 107, 255, 0.5);
+        box-shadow: 0 0 20px rgba(198, 107, 255, 0.3);
+    }
+    .status-pill.green { border-color: rgba(56, 239, 125, 0.4); color: #38ef7d; }
+    .status-pill.red { border-color: rgba(235, 51, 73, 0.4); color: #eb3349; }
+    .status-pill.purple { border-color: rgba(198, 107, 255, 0.4); color: #c66bff; }
+    .status-pill.orange { border-color: rgba(242, 153, 74, 0.4); color: #f2994a; }
+    .step-card {
+        background: rgba(255, 255, 255, 0.03);
+        backdrop-filter: blur(20px);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 20px;
+        padding: 24px 28px;
+        margin: 20px 0;
+        position: relative;
+        overflow: hidden;
+        transition: all 0.4s;
+    }
+    .step-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 4px;
+        height: 100%;
+        background: linear-gradient(180deg, #ff6b9d, #c66bff, #6ba8ff);
+        border-radius: 4px;
+    }
+    .step-card:hover {
+        border-color: rgba(198, 107, 255, 0.3);
+        box-shadow: 0 20px 60px rgba(198, 107, 255, 0.15);
+        transform: translateY(-2px);
+    }
+    .step-num {
+        display: inline-block;
+        width: 42px;
+        height: 42px;
+        background: linear-gradient(135deg, #ff6b9d, #c66bff);
+        border-radius: 12px;
+        text-align: center;
+        line-height: 42px;
+        font-size: 1.2rem;
+        font-weight: 800;
+        color: white;
+        margin-right: 12px;
+        box-shadow: 0 6px 20px rgba(198, 107, 255, 0.4);
+    }
+    .step-title {
+        font-size: 1.3rem;
+        font-weight: 700;
+        color: #ffffff;
+        display: inline-block;
+        vertical-align: middle;
+    }
+    .glass-info {
+        background: linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(198, 107, 255, 0.08));
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(198, 107, 255, 0.2);
+        border-radius: 16px;
+        padding: 18px 22px;
+        margin: 15px 0;
+        color: #d0d0e0;
+        font-size: 0.95rem;
+        line-height: 1.6;
+    }
+    .glass-info a {
+        color: #c66bff !important;
+        font-weight: 600;
+        text-decoration: none;
+    }
+    .metric-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+        gap: 12px;
+        margin: 15px 0;
+    }
+    .metric-tile {
+        background: rgba(255, 255, 255, 0.04);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 14px;
+        padding: 16px 12px;
+        text-align: center;
+        transition: all 0.3s;
+    }
+    .metric-tile:hover {
+        background: rgba(198, 107, 255, 0.08);
+        border-color: rgba(198, 107, 255, 0.3);
+        transform: translateY(-3px);
+    }
+    .metric-icon { font-size: 1.5rem; margin-bottom: 6px; }
+    .metric-val {
+        font-size: 1.5rem;
+        font-weight: 800;
+        background: linear-gradient(135deg, #ff6b9d, #c66bff);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+    }
+    .metric-lbl {
+        font-size: 0.75rem;
+        color: #8888aa;
+        margin-top: 4px;
+        text-transform: uppercase;
     }
     .stButton > button {
-        background: linear-gradient(90deg, #667eea, #764ba2);
-        color: white;
-        border: none;
-        border-radius: 12px;
-        padding: 14px 20px;
-        font-size: 1rem;
-        font-weight: 700;
-        transition: all 0.3s ease;
-        box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        background: linear-gradient(135deg, #ff6b9d 0%, #c66bff 100%) !important;
+        color: white !important;
+        border: none !important;
+        border-radius: 14px !important;
+        padding: 14px 24px !important;
+        font-size: 1rem !important;
+        font-weight: 700 !important;
+        transition: all 0.3s !important;
+        box-shadow: 0 8px 25px rgba(198, 107, 255, 0.35) !important;
     }
     .stButton > button:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 8px 25px rgba(102, 126, 234, 0.6);
+        transform: translateY(-3px) !important;
+        box-shadow: 0 12px 35px rgba(198, 107, 255, 0.5) !important;
     }
     .stTextArea textarea, .stTextInput input {
-        background: rgba(255, 255, 255, 0.05) !important;
-        border: 1px solid rgba(255, 255, 255, 0.15) !important;
+        background: rgba(255, 255, 255, 0.04) !important;
+        border: 1px solid rgba(255, 255, 255, 0.1) !important;
         color: #ffffff !important;
-        border-radius: 12px !important;
+        border-radius: 14px !important;
+        padding: 14px !important;
+    }
+    .stTextArea textarea:focus, .stTextInput input:focus {
+        border-color: #c66bff !important;
+        box-shadow: 0 0 0 3px rgba(198, 107, 255, 0.2) !important;
     }
     .stFileUploader {
-        background: rgba(255, 255, 255, 0.03);
-        border-radius: 12px;
-        padding: 10px;
-        border: 1px dashed rgba(102, 126, 234, 0.5);
+        background: rgba(255, 255, 255, 0.02);
+        border-radius: 14px;
+        padding: 12px;
+        border: 2px dashed rgba(198, 107, 255, 0.3);
     }
-    hr { border-color: rgba(255, 255, 255, 0.1); margin: 25px 0; }
     section[data-testid="stSidebar"] {
-        background: linear-gradient(180deg, #1a1a2e, #16213e);
+        background: linear-gradient(180deg, #0f0c29, #1a1a3e);
     }
-    .metric-card {
-        background: rgba(255, 255, 255, 0.05);
-        border-radius: 12px;
-        padding: 15px;
-        text-align: center;
-        border: 1px solid rgba(255, 255, 255, 0.1);
+    hr {
+        border: none;
+        height: 1px;
+        background: linear-gradient(90deg, transparent, rgba(198, 107, 255, 0.3), transparent);
+        margin: 30px 0;
     }
-    .metric-value {
-        font-size: 1.6rem;
-        font-weight: 800;
-        color: #667eea;
-    }
-    .metric-label {
-        font-size: 0.85rem;
-        color: #a0a0c0;
-        margin-top: 4px;
-    }
+    .stAlert { border-radius: 14px !important; border: none !important; }
 </style>
 """, unsafe_allow_html=True)
-
 # ============================================================
 # Password
 # ============================================================
@@ -160,7 +264,6 @@ if not st.session_state.authenticated:
             <p style='color:#a0a0c0;'>Password ထည့်ပြီး ဝင်ပါ</p>
         </div>
     """, unsafe_allow_html=True)
-
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
         pwd = st.text_input("Password", type="password", label_visibility="collapsed", placeholder="Password")
@@ -171,6 +274,7 @@ if not st.session_state.authenticated:
             else:
                 st.error("Password မှား")
     st.stop()
+
 # ============================================================
 # Helper Functions
 # ============================================================
@@ -462,32 +566,42 @@ def run_tts_chunked(text, output_path, ref_audio_path=None, progress_callback=No
     ).run(overwrite_output=True)
     return output_path
 # ============================================================
-# HEADER
+# HERO HEADER
 # ============================================================
 st.markdown("""
-    <div style='text-align:center; padding: 20px 0 10px 0;'>
-        <h1 class='main-title'>VoxCPM2 Movie Recap</h1>
-        <p class='sub-title'>Gemini Web → Script → VoxCPM2 → မြန်မာ Recap Video</p>
+    <div class='hero-container'>
+        <h1 class='hero-title'>VoxCPM2 Movie Recap</h1>
+        <p class='hero-sub'>Gemini Web → Script → VoxCPM2 → မြန်မာ Recap</p>
+        <div class='hero-line'></div>
     </div>
 """, unsafe_allow_html=True)
 
-col1, col2, col3 = st.columns(3)
-with col1:
-    font_status = "Font Ready" if os.path.exists(FONT_FILE) else "Font Missing"
-    font_pill = "pill-green" if os.path.exists(FONT_FILE) else "pill-red"
-    st.markdown(f"<div style='text-align:center;'><span class='pill {font_pill}'>{font_status}</span></div>", unsafe_allow_html=True)
-with col2:
-    st.markdown("<div style='text-align:center;'><span class='pill'>Private App</span></div>", unsafe_allow_html=True)
-with col3:
-    st.markdown("<div style='text-align:center;'><span class='pill pill-orange'>VoxCPM2 Engine</span></div>", unsafe_allow_html=True)
+font_ok = os.path.exists(FONT_FILE)
+st.markdown(f"""
+<div class='status-row'>
+    <span class='status-pill {"green" if font_ok else "red"}'>
+        {"✓" if font_ok else "✗"} Font {"Ready" if font_ok else "Missing"}
+    </span>
+    <span class='status-pill purple'>Private</span>
+    <span class='status-pill orange'>VoxCPM2</span>
+    <span class='status-pill'>Myanmar TTS</span>
+</div>
+""", unsafe_allow_html=True)
 
-st.markdown("<br>", unsafe_allow_html=True)
-
+# ============================================================
 # STEP 1
-st.markdown("<div class='section-header'>Step 1: Gemini Web → Script</div>", unsafe_allow_html=True)
+# ============================================================
 st.markdown("""
-<div class='info-box'>
-    <b>Gemini Web:</b> <a href='https://gemini.google.com' target='_blank' style='color:#a0c0ff;'>gemini.google.com</a> →
+<div class='step-card'>
+    <span class='step-num'>1</span>
+    <span class='step-title'>Gemini Web → Script</span>
+</div>
+""", unsafe_allow_html=True)
+
+st.markdown("""
+<div class='glass-info'>
+    <b>Gemini Web ကို ဖွင့်ပါ:</b> 
+    <a href='https://gemini.google.com' target='_blank'>gemini.google.com</a><br>
     Video Upload → Prompt Paste → Script Copy
 </div>
 """, unsafe_allow_html=True)
@@ -500,8 +614,16 @@ with st.expander("Prompt (Copy → Gemini Web)", expanded=True):
         language="text"
     )
 
+# ============================================================
 # STEP 2
-st.markdown("<div class='section-header'>Step 2: Script Paste</div>", unsafe_allow_html=True)
+# ============================================================
+st.markdown("""
+<div class='step-card'>
+    <span class='step-num'>2</span>
+    <span class='step-title'>Script Paste</span>
+</div>
+""", unsafe_allow_html=True)
+
 if "script_text" not in st.session_state:
     st.session_state.script_text = ""
 
@@ -509,7 +631,7 @@ script = st.text_area(
     "Script",
     value=st.session_state.script_text,
     height=250,
-    placeholder="မြန်မာ Script paste...",
+    placeholder="မြန်မာ Script ကို ဒီမှာ paste လုပ်ပါ...",
     label_visibility="collapsed"
 )
 st.session_state.script_text = script
@@ -517,24 +639,43 @@ st.session_state.script_text = script
 col1, col2 = st.columns([3, 1])
 with col1:
     char_count = len(script)
-    word_color = "#38ef7d" if char_count > 50 else "#f2c94c" if char_count > 0 else "#f45c43"
+    if char_count > 100:
+        color, status = "#38ef7d", "Ready"
+    elif char_count > 0:
+        color, status = "#f2c94c", "Short"
+    else:
+        color, status = "#eb3349", "Empty"
     st.markdown(
-        f"<div style='padding:10px;'><span style='color:{word_color}; font-weight:600;'>စာလုံး: {char_count:,}</span></div>",
+        f"<div style='padding:12px 0;'>"
+        f"<span style='color:{color}; font-weight:700; font-size:1rem;'>"
+        f"{char_count:,} စာလုံး</span>"
+        f"<span style='color:#8888aa; margin-left:12px; font-size:0.85rem;'>• {status}</span>"
+        f"</div>",
         unsafe_allow_html=True
     )
 with col2:
-    if st.button("ဖျက်မယ်", use_container_width=True):
+    if st.button("Clear", use_container_width=True):
         st.session_state.script_text = ""
         st.rerun()
 
+# ============================================================
 # STEP 3
-st.markdown("<div class='section-header'>Step 3: Reference Audio + Video</div>", unsafe_allow_html=True)
+# ============================================================
+st.markdown("""
+<div class='step-card'>
+    <span class='step-num'>3</span>
+    <span class='step-title'>Reference Audio + Video</span>
+</div>
+""", unsafe_allow_html=True)
+
 if "ref_audio_path" not in st.session_state:
     st.session_state.ref_audio_path = None
 
 col1, col2 = st.columns(2)
+
 with col1:
-    st.markdown("**Reference Audio** (Optional)")
+    st.markdown("##### 🎤 Reference Audio")
+    st.caption("Optional — Voice Cloning အတွက်")
     ref_audio = st.file_uploader(
         "Reference Audio",
         type=["wav", "mp3", "m4a"],
@@ -546,9 +687,14 @@ with col1:
         with open(ref_path, "wb") as f:
             f.write(ref_audio.read())
         st.session_state.ref_audio_path = ref_path
-        st.markdown("<span class='pill pill-green'>Reference Audio Ready</span>", unsafe_allow_html=True)
+        st.markdown(
+            "<span class='status-pill green' style='display:inline-flex;'>✓ Audio Ready</span>",
+            unsafe_allow_html=True
+        )
+
 with col2:
-    st.markdown("**Video Upload**")
+    st.markdown("##### 📹 Video Upload")
+    st.caption("MP4, MOV, AVI, MKV")
     video_file = st.file_uploader(
         "Video Upload",
         type=["mp4", "mov", "avi", "mkv"],
@@ -557,148 +703,7 @@ with col2:
     )
     if video_file is not None:
         size_mb = video_file.size / (1024 * 1024)
-        st.markdown(f"<span class='pill pill-green'>Video: {size_mb:.1f} MB</span>", unsafe_allow_html=True)
-
-# SUBTITLE SETTINGS
-st.markdown("<div class='section-header'>Subtitle Settings</div>", unsafe_allow_html=True)
-use_subtitle = st.toggle("စာတန်းထိုး (Burn-in)", value=True)
-
-sub_position = DEFAULT_SUB_POSITION
-sub_font_size = DEFAULT_FONT_SIZE
-blur_height = DEFAULT_BLUR_HEIGHT
-blur_alpha = DEFAULT_BLUR_ALPHA
-
-col1, col2, col3, col4 = st.columns(4)
-with col1:
-    st.markdown("<div class='metric-card'><div class='metric-value'>📍</div><div class='metric-label'>အလယ်</div></div>", unsafe_allow_html=True)
-with col2:
-    st.markdown(f"<div class='metric-card'><div class='metric-value'>{sub_font_size}</div><div class='metric-label'>Font Size</div></div>", unsafe_allow_html=True)
-with col3:
-    st.markdown(f"<div class='metric-card'><div class='metric-value'>{blur_height}px</div><div class='metric-label'>Blur Box</div></div>", unsafe_allow_html=True)
-with col4:
-    st.markdown(f"<div class='metric-card'><div class='metric-value'>{blur_alpha}</div><div class='metric-label'>Opacity</div></div>", unsafe_allow_html=True)
-
-# PREVIEW
-if video_file is not None and use_subtitle:
-    st.markdown("<div class='section-header'>Preview</div>", unsafe_allow_html=True)
-    with st.spinner("Preview ဖန်တီးနေသည်..."):
-        temp_video_preview = "preview_video.mp4"
-        video_file.seek(0)
-        with open(temp_video_preview, "wb") as f:
-            f.write(video_file.read())
-        W, H, _ = get_video_info(temp_video_preview)
-        preview_png = "preview_sub.png"
-        render_subtitle_png(
-            text="စာတန်းထိုး Preview",
-            output_path=preview_png,
-            font_path=FONT_FILE,
-            width=W,
-            height=H,
-            font_size=sub_font_size,
-            position=sub_position,
-            blur_height=blur_height,
-            blur_alpha=blur_alpha
+        st.markdown(
+            f"<span class='status-pill green' style='display:inline-flex;'>✓ {size_mb:.1f} MB</span>",
+            unsafe_allow_html=True
         )
-        cap = cv2.VideoCapture(temp_video_preview)
-        ret, frame = cap.read()
-        cap.release()
-        if ret:
-            frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-            bg = Image.fromarray(frame_rgb).convert("RGBA")
-            fg = Image.open(preview_png).convert("RGBA")
-            composite = Image.alpha_composite(bg, fg)
-            pw = 720
-            ph = int(H * (pw / W))
-            composite.resize((pw, ph), Image.LANCZOS).convert("RGB").save("preview_result.png")
-            st.image("preview_result.png", caption="Preview", use_container_width=True)
-
-# STEP 4
-st.markdown("<div class='section-header'>Step 4: Generate Recap</div>", unsafe_allow_html=True)
-st.markdown("""
-<div class='info-box'>
-    <b>Ready?</b> Script + Video ပြည့်စုံရင် — Generate ကို နှိပ်လိုက်ပါ။<br>
-    AI က VoxCPM2 အသံနဲ့ မြန်မာ Recap Video ကို ဖန်တီးပေးပါမယ်။
-</div>
-""", unsafe_allow_html=True)
-
-generate_clicked = st.button("Generate Recap Video", type="primary", use_container_width=True)
-
-if generate_clicked:
-    if not script.strip():
-        st.error("Script paste — Step 2")
-        st.stop()
-    if video_file is None:
-        st.error("Video Upload — Step 3")
-        st.stop()
-    with st.spinner("Video — စစ်ဆေးနေသည်..."):
-        video_filename = "input_video.mp4"
-        video_file.seek(0)
-        with open(video_filename, "wb") as f:
-            f.write(video_file.read())
-        W, H, video_duration = get_video_info(video_filename)
-        col1, col2, col3 = st.columns(3)
-        with col1:
-            st.markdown(f"<div class='metric-card'><div class='metric-value'>{W}x{H}</div><div class='metric-label'>Resolution</div></div>", unsafe_allow_html=True)
-        with col2:
-            st.markdown(f"<div class='metric-card'><div class='metric-value'>{video_duration:.1f}s</div><div class='metric-label'>Duration</div></div>", unsafe_allow_html=True)
-        with col3:
-            st.markdown(f"<div class='metric-card'><div class='metric-value'>{len(script)}</div><div class='metric-label'>Characters</div></div>", unsafe_allow_html=True)
-    st.markdown("<br>", unsafe_allow_html=True)
-    st.info("VoxCPM2 → အသံ ဖန်တီးနေသည်...")
-    progress_bar = st.progress(0)
-    status_text = st.empty()
-    def update_progress(i, total, chunk):
-        progress_bar.progress((i + 1) / total)
-        status_text.markdown(f"<span class='pill'>[{i+1}/{total}] ({len(chunk)} စာလုံး)</span>", unsafe_allow_html=True)
-    audio_path = "recap_voice.mp3"
-    try:
-        run_tts_chunked(script, audio_path,
-                        ref_audio_path=st.session_state.ref_audio_path,
-                        progress_callback=update_progress)
-        st.success("အသံ ထုတ်ပြီး")
-        audio_dur = float(ffmpeg.probe(audio_path)['format']['duration'])
-        st.markdown(f"<span class='pill pill-green'>Audio: {audio_dur:.1f}s</span>", unsafe_allow_html=True)
-    except Exception as e:
-        st.error(f"VoxCPM2 error: {e}")
-        st.stop()
-    tempo = audio_dur / video_duration
-    tempo = max(0.5, min(2.0, tempo))
-    st.markdown(f"<span class='pill pill-orange'>Audio Speed: {tempo:.2f}x</span>", unsafe_allow_html=True)
-    srt_path = None
-    if use_subtitle:
-        with st.spinner("Script → SRT..."):
-            srt_path = script_to_srt(script, video_duration, "recap.srt")
-            if srt_path and os.path.exists(srt_path):
-                st.success("SRT — ဖန်တီးပြီး")
-    with st.spinner("Recap Video Render..."):
-        temp_video = "temp_recap.mp4"
-        input_video = ffmpeg.input(video_filename)
-        input_audio = ffmpeg.input(audio_path).audio.filter('atempo', tempo)
-        stream = ffmpeg.output(
-            input_video.video, input_audio, temp_video,
-            vcodec='libx264', crf=18, preset='medium',
-            acodec='aac', audio_bitrate='192k',
-            shortest=None
-        )
-        ffmpeg.run(stream, overwrite_output=True)
-        final_path = "final_recap.mp4"
-        if use_subtitle and srt_path:
-            with st.spinner("Subtitle Overlay — လုပ်နေသည်..."):
-                overlay_subtitle_on_video(
-                    video_path=temp_video,
-                    srt_path=srt_path,
-                    output_path=final_path,
-                    font_path=FONT_FILE,
-                    font_size=sub_font_size,
-                    position=sub_position,
-                    blur_height=blur_height,
-                    blur_alpha=blur_alpha
-                )
-                st.success("Subtitle — Overlay ပြီး")
-        else:
-            shutil.copy(temp_video, final_path)
-    st.success("ပြီးပါပြီ!")
-    st.video(final_path)
-    f = open(final_path, "rb")
-    st.download_button("Recap Video Download", f, file_name="final_recap.mp4")
-    f.close()
