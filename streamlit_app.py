@@ -626,4 +626,4 @@ if video_file is not None and use_subtitle:
             pw = 720
             ph = int(H * (pw / W))
             composite.resize((pw, ph), Image.LANCZOS).convert("RGB").save("preview_result.png")
-            st.image("preview_result.png", caption="🖼️ Preview
+            st.image("preview_result.png", caption="🖼️ Preview"
