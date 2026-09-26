@@ -708,6 +708,9 @@ with col2:
             unsafe_allow_html=True
         )
     ✨ <b>Ready to Go!</b><br>
+    st.markdown("""
+<div class='glass-info'>
+    ✨ <b>Ready to Go!</b><br>
     Script + Video ပြည့်စုံပြီဆိုရင် — အောက်က Button ကို နှိပ်လိုက်ပါ။<br>
     AI က VoxCPM2 အသံနဲ့ မြန်မာ Recap Video ကို ဖန်တီးပေးပါမယ်။
 </div>
@@ -729,28 +732,7 @@ if generate_clicked:
         with open(video_filename, "wb") as f:
             f.write(video_file.read())
         W, H, video_duration = get_video_info(video_filename)
-        
-        st.markdown(f"""
-        <div class='metric-grid'>
-            <div class='metric-tile'>
-                <div class='metric-icon'>📐</div>
-                <div class='metric-val'>{W}×{H}</div>
-                <div class='metric-lbl'>Resolution</div>
-            </div>
-            <div class='metric-tile'>
-                <div class='metric-icon'>⏱️</div>
-                <div class='metric-val'>{video_duration:.1f}s</div>
-                <div class='metric-lbl'>Duration</div>
-            </div>
-            <div class='metric-tile'>
-                <div class='metric-icon'>📝</div>
-                <div class='metric-val'>{len(script):,}</div>
-                <div class='metric-lbl'>Characters</div>
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
 
-    st.markdown("<br>", unsafe_allow_html=True)
     st.info("VoxCPM2 → အသံ ဖန်တီးနေသည်...")
 
     progress_bar = st.progress(0)
@@ -758,10 +740,7 @@ if generate_clicked:
 
     def update_progress(i, total, chunk):
         progress_bar.progress((i + 1) / total)
-        status_text.markdown(
-            f"<span class='status-pill purple'>[{i+1}/{total}] — {len(chunk)} စာလုံး</span>",
-            unsafe_allow_html=True
-        )
+        status_text.markdown(f"<span class='status-pill purple'>[{i+1}/{total}] — {len(chunk)} စာလုံး</span>", unsafe_allow_html=True)
 
     audio_path = "recap_voice.mp3"
 
@@ -771,20 +750,14 @@ if generate_clicked:
                         progress_callback=update_progress)
         st.success("အသံ ထုတ်ပြီး")
         audio_dur = float(ffmpeg.probe(audio_path)['format']['duration'])
-        st.markdown(
-            f"<span class='status-pill green' style='display:inline-flex;'>Audio: {audio_dur:.1f}s</span>",
-            unsafe_allow_html=True
-        )
+        st.markdown(f"<span class='status-pill green' style='display:inline-flex;'>Audio: {audio_dur:.1f}s</span>", unsafe_allow_html=True)
     except Exception as e:
         st.error(f"VoxCPM2 error: {e}")
         st.stop()
 
     tempo = audio_dur / video_duration
     tempo = max(0.5, min(2.0, tempo))
-    st.markdown(
-        f"<span class='status-pill orange' style='display:inline-flex;'>Audio Speed: {tempo:.2f}x</span>",
-        unsafe_allow_html=True
-    )
+    st.markdown(f"<span class='status-pill orange' style='display:inline-flex;'>Audio Speed: {tempo:.2f}x</span>", unsafe_allow_html=True)
 
     srt_path = None
     if use_subtitle:
