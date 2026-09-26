@@ -707,10 +707,10 @@ with col2:
             f"<span class='status-pill green' style='display:inline-flex;'>✓ {size_mb:.1f} MB</span>",
             unsafe_allow_html=True
         )
-    ✨ <b>Ready to Go!</b><br>
+     <b>Ready to Go!</b><br>
     st.markdown("""
 <div class='glass-info'>
-    ✨ <b>Ready to Go!</b><br>
+     <b>Ready to Go!</b><br>
 # ============================================================
 # STEP 4 — SUBTITLE SETTINGS
 # ============================================================
