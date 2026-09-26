@@ -1,4 +1,5 @@
-google-genai
-edge-tts
-ffmpeg-python
 streamlit
+gradio_client
+ffmpeg-python
+opencv-python-headless
+Pillow
