@@ -11,7 +11,13 @@ SPACES = [
 ]
 PASSWORD = "voxcpm2026"
 FONT_FILE = "MyanmarPadaung.ttf"
-FS, BH, BA = 30, 100, 100   # ပုံသေ — Font, Box, Opacity
+
+# ⚡ အမြန်ဆုံး Settings
+FS, BH, BA = 30, 100, 100
+ENC_PRESET = "ultrafast"   # ⚡ အမြန်ဆုံး
+ENC_CRF = 23               # ⚡ File သေး + မြန်
+AUDIO_BITRATE = "128k"     # ⚡ မြန်
+TTS_CHUNK = 600            # ⚡ API Call နည်း
 
 st.set_page_config(page_title="VoxCPM2 Recap", page_icon="🎬", layout="centered")
 
@@ -89,6 +95,7 @@ def s2t(ts):
 
 
 def render_png(text, out, fp, W, H, fs=30, pos="center", bh=100, ba=100):
+    """Preview အတွက်သာ — Render မှာ မသုံးတော့ဘူး"""
     img = Image.new("RGBA", (W, H), (0,0,0,0)); d = ImageDraw.Draw(img)
     try: f = ImageFont.truetype(fp, fs)
     except: f = ImageFont.load_default()
@@ -134,49 +141,38 @@ def scr_to_srt(scr, dur, path, mc=30):
     return path
 
 
-def parse_srt(path):
-    with open(path, "r", encoding="utf-8") as f:
-        raw = f.read().replace("\r\n","\n").replace("\r","\n")
-    segs = []
-    for ck in re.split(r"\n\s*\n", raw.strip()):
-        ls = [l for l in ck.split("\n") if l.strip()]
-        if len(ls) < 3: continue
-        ts = next((l for l in ls if "-->" in l), None)
-        if not ts: continue
-        p = re.split(r"\s*-->\s*", ts)
-        if len(p) != 2: continue
-        a, b = s2t(p[0]), s2t(p[1])
-        if a is None or b is None: continue
-        idx = ls.index(ts); txt = " ".join(ls[idx+1:]).strip()
-        if txt: segs.append({"start": a, "end": b, "text": txt})
-    return segs
-
-
 def overlay(vp, sp, op, fp, fs=30, pos="center", bh=100, ba=100):
-    W, H, _ = vid_info(vp); segs = parse_srt(sp)
-    if not segs: raise Exception("SRT empty")
-    os.makedirs("subtitle_pngs", exist_ok=True); pngs = []
-    for i, s in enumerate(segs):
-        p = f"subtitle_pngs/s_{i:04d}.png"
-        render_png(s["text"], p, fp, W, H, fs, pos, bh, ba)
-        pngs.append({"p": p, "a": s["start"], "b": s["end"]})
-    cmd = ["ffmpeg","-y","-i",vp] + sum([["-i",x["p"]] for x in pngs], [])
-    flt, cur = [], "[0:v]"
-    for i, x in enumerate(pngs):
-        lbl = f"[v{i}]"
-        flt.append(f"{cur}[{i+1}:v]overlay=0:0:enable='between(t,{x['a']:.3f},{x['b']:.3f})'{lbl}")
-        cur = lbl
-    cmd += ["-filter_complex",";".join(flt),"-map",cur,"-map","0:a?",
-            "-c:v","libx264","-crf","18","-preset","medium","-c:a","copy",op]
+    """⚡ FFmpeg Native Subtitle — PNG မလိုဘူး — အမြန်ဆုံး"""
+    alpha_hex = f"{ba:02X}"
+    align = 10 if pos == "center" else 2  # 10=center, 2=bottom
+    style = (
+        f"FontName=MyanmarPadaung,"
+        f"FontSize={fs},"
+        f"PrimaryColour=&H00FFFFFF,"
+        f"OutlineColour=&H00000000,"
+        f"BackColour=&H{alpha_hex}000000,"
+        f"BorderStyle=3,"
+        f"Outline=2,"
+        f"Alignment={align},"
+        f"MarginV={bh}"
+    )
+    srt_esc = sp.replace("\\", "/").replace(":", "\\:")
+    cmd = [
+        "ffmpeg", "-y", "-i", vp,
+        "-vf", f"subtitles={srt_esc}:force_style='{style}'",
+        "-c:v", "libx264",
+        "-crf", str(ENC_CRF),
+        "-preset", ENC_PRESET,
+        "-c:a", "copy",
+        op
+    ]
     r = subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8", errors="ignore")
-    if r.returncode != 0: raise Exception(f"FFmpeg: {(r.stderr or '')[-500:]}")
-    for x in pngs:
-        try: os.remove(x["p"])
-        except: pass
+    if r.returncode != 0:
+        raise Exception(f"FFmpeg: {(r.stderr or '')[-500:]}")
     return op
 
 
-def split_scr(t, mc=400):
+def split_scr(t, mc=TTS_CHUNK):
     sents = [s.strip()+"။" for s in t.replace("။","။|").split("|") if s.strip()]
     out, cur = [], ""
     for s in sents:
@@ -220,7 +216,7 @@ def tts_burmese(chunks, ref, space, cb=None):
 
 
 def tts_all(text, out, ref=None, cb=None):
-    chunks = split_scr(text, 400); files = None
+    chunks = split_scr(text, TTS_CHUNK); files = None
     for s in SPACES:
         try:
             if s["type"] == "demo": files = tts_run(chunks, ref, s["space"], cb)
@@ -232,7 +228,7 @@ def tts_all(text, out, ref=None, cb=None):
     with open("concat.txt", "w", encoding="utf-8") as f:
         for a in files: f.write(f"file '{a}'\n")
     ffmpeg.input("concat.txt", format="concat", safe=0).output(
-        out, acodec="libmp3lame", audio_bitrate="192k", ar=48000
+        out, acodec="libmp3lame", audio_bitrate=AUDIO_BITRATE, ar=48000
     ).run(overwrite_output=True)
     return out
 
@@ -240,6 +236,7 @@ def tts_all(text, out, ref=None, cb=None):
 # ===== UI =====
 st.markdown("<div class='main-title'>🎬 VoxCPM2 Recap</div>", unsafe_allow_html=True)
 st.markdown("<div class='main-sub'>Video → မြန်မာ Script → Recap Video</div>", unsafe_allow_html=True)
+st.caption(f"⚡ Fast Mode — {ENC_PRESET} @ CRF {ENC_CRF}")
 st.divider()
 
 # Step 1
@@ -301,27 +298,40 @@ st.subheader("🚀 Step 5 — Generate Recap")
 if st.button("✨ Generate Recap Video", type="primary", use_container_width=True):
     if not script.strip(): st.error("Script paste လုပ်ပါ"); st.stop()
     if vid is None: st.error("Video Upload တင်ပါ"); st.stop()
+
     vid.seek(0)
     with open("input.mp4", "wb") as f: f.write(vid.read())
     _, _, vdur = vid_info("input.mp4")
+
     pb = st.progress(0); txt = st.empty()
     def cb(i, tot, c):
         pb.progress((i+1)/tot); txt.caption(f"[{i+1}/{tot}] {len(c)} စာလုံး")
+
+    # TTS
     try: tts_all(script, "voice.mp3", st.session_state.ref, cb)
     except Exception as e: st.error(f"TTS — {e}"); st.stop()
+
     adur = float(ffmpeg.probe("voice.mp3")['format']['duration'])
     tempo = max(0.5, min(2.0, adur/vdur))
+
     sp = scr_to_srt(script, vdur, "sub.srt") if use_sub else None
-    with st.spinner("🎬 Rendering..."):
+
+    # ⚡ Render — အမြန်ဆုံး
+    with st.spinner("🎬 Rendering — Fast Mode..."):
         vi = ffmpeg.input("input.mp4")
         va = ffmpeg.input("voice.mp3").audio.filter('atempo', tempo)
         ffmpeg.output(vi.video, va, "temp.mp4",
-                       vcodec='libx264', crf=18, preset='medium',
-                       acodec='aac', audio_bitrate='192k', shortest=None
+                       vcodec='libx264', crf=ENC_CRF, preset=ENC_PRESET,
+                       acodec='aac', audio_bitrate=AUDIO_BITRATE, shortest=None
                        ).run(overwrite_output=True)
-        if use_sub and sp: overlay("temp.mp4", sp, "final.mp4", FONT_FILE, FS, "center", BH, BA)
-        else: shutil.copy("temp.mp4", "final.mp4")
+
+        if use_sub and sp:
+            overlay("temp.mp4", sp, "final.mp4", FONT_FILE, FS, "center", BH, BA)
+        else:
+            shutil.copy("temp.mp4", "final.mp4")
+
     st.success(f"✅ Done — {adur:.0f}s @ {tempo:.2f}x")
     st.video("final.mp4")
+
     with open("final.mp4", "rb") as f:
         st.download_button("📥 Download Recap Video", f, file_name="recap.mp4")
