@@ -806,4 +806,81 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 st.markdown("""
-<div class='glass-info
+<div class='glass-info'>
+    <b>Ready to Go!</b><br>
+    Script + Video ပြည့်စုံပြီဆိုရင် — အောက်က Button ကို နှိပ်လိုက်ပါ။
+</div>
+""", unsafe_allow_html=True)
+
+generate_clicked = st.button("Generate Recap Video", type="primary", use_container_width=True)
+
+if generate_clicked:
+    if not script.strip():
+        st.error("Script paste လုပ်ပါ — Step 2")
+        st.stop()
+    if video_file is None:
+        st.error("Video Upload တင်ပါ — Step 3")
+        st.stop()
+
+    with st.spinner("Video စစ်ဆေးနေသည်..."):
+        video_filename = "input_video.mp4"
+        video_file.seek(0)
+        with open(video_filename, "wb") as f:
+            f.write(video_file.read())
+        W, H, video_duration = get_video_info(video_filename)
+
+    st.info("VoxCPM2 → အသံ ဖန်တီးနေသည်...")
+    progress_bar = st.progress(0)
+    status_text = st.empty()
+
+    def update_progress(i, total, chunk):
+        progress_bar.progress((i + 1) / total)
+        status_text.markdown(f"<span class='status-pill purple'>[{i+1}/{total}] — {len(chunk)} စာလုံး</span>", unsafe_allow_html=True)
+
+    audio_path = "recap_voice.mp3"
+    try:
+        run_tts_chunked(script, audio_path,
+                        ref_audio_path=st.session_state.ref_audio_path,
+                        progress_callback=update_progress)
+        st.success("အသံ ထုတ်ပြီး")
+        audio_dur = float(ffmpeg.probe(audio_path)['format']['duration'])
+        st.markdown(f"<span class='status-pill green'>Audio: {audio_dur:.1f}s</span>", unsafe_allow_html=True)
+    except Exception as e:
+        st.error(f"VoxCPM2 error: {e}")
+        st.stop()
+
+    tempo = audio_dur / video_duration
+    tempo = max(0.5, min(2.0, tempo))
+    st.markdown(f"<span class='status-pill orange'>Audio Speed: {tempo:.2f}x</span>", unsafe_allow_html=True)
+
+    srt_path = None
+    if use_subtitle:
+        with st.spinner("Script → SRT..."):
+            srt_path = script_to_srt(script, video_duration, "recap.srt")
+            if srt_path and os.path.exists(srt_path):
+                st.success("SRT ဖန်တီးပြီး")
+
+    with st.spinner("Recap Video Render..."):
+        temp_video = "temp_recap.mp4"
+        input_video = ffmpeg.input(video_filename)
+        input_audio = ffmpeg.input(audio_path).audio.filter('atempo', tempo)
+        stream = ffmpeg.output(input_video.video, input_audio, temp_video,
+                                vcodec='libx264', crf=18, preset='medium',
+                                acodec='aac', audio_bitrate='192k', shortest=None)
+        ffmpeg.run(stream, overwrite_output=True)
+
+        final_path = "final_recap.mp4"
+        if use_subtitle and srt_path:
+            with st.spinner("Subtitle Overlay..."):
+                overlay_subtitle_on_video(temp_video, srt_path, final_path,
+                                           FONT_FILE, sub_font_size, sub_position,
+                                           blur_height, blur_alpha)
+                st.success("Subtitle Overlay ပြီး")
+        else:
+            shutil.copy(temp_video, final_path)
+
+    st.success("ပြီးပါပြီ!")
+    st.video(final_path)
+    f = open(final_path, "rb")
+    st.download_button("Recap Video Download", f, file_name="final_recap.mp4")
+    f.close()
