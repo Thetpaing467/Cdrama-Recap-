@@ -26,6 +26,10 @@ DEFAULT_SUB_POSITION = "center"
 DEFAULT_FONT_SIZE = 30
 DEFAULT_BLUR_HEIGHT = 100
 DEFAULT_BLUR_ALPHA = 100
+DEFAULT_TEXT_COLOR = "#FFFFFF"
+DEFAULT_OUTLINE_COLOR = "#000000"
+DEFAULT_BOX_COLOR = "#000000"
+DEFAULT_OUTLINE_WIDTH = 2
 
 # ============================================================
 # Password
@@ -78,10 +82,25 @@ def ts_to_sec(ts):
     return None
 
 
+def hex_to_rgba(hex_color, alpha=255):
+    """#FFFFFF → (255,255,255,alpha)"""
+    hex_color = hex_color.lstrip('#')
+    if len(hex_color) == 3:
+        hex_color = ''.join([c*2 for c in hex_color])
+    r = int(hex_color[0:2], 16)
+    g = int(hex_color[2:4], 16)
+    b = int(hex_color[4:6], 16)
+    return (r, g, b, alpha)
+
+
 def render_subtitle_png(text, output_path, font_path,
                          width, height, font_size=30,
                          position="center", blur_height=120,
-                         blur_alpha=160):
+                         blur_alpha=160,
+                         text_color="#FFFFFF",
+                         outline_color="#000000",
+                         box_color="#000000",
+                         outline_width=2):
     img = Image.new("RGBA", (width, height), (0, 0, 0, 0))
     draw = ImageDraw.Draw(img)
 
@@ -90,6 +109,7 @@ def render_subtitle_png(text, output_path, font_path,
     except Exception:
         font = ImageFont.load_default()
 
+    # ---- Position ----
     if position == "bottom":
         box_y = height - blur_height
     elif position == "center":
@@ -97,11 +117,14 @@ def render_subtitle_png(text, output_path, font_path,
     else:
         box_y = 0
 
+    # ---- Blur Box ----
+    box_rgba = hex_to_rgba(box_color, blur_alpha)
     draw.rectangle(
         [0, box_y, width, box_y + blur_height],
-        fill=(0, 0, 0, blur_alpha)
+        fill=box_rgba
     )
 
+    # ---- Text Wrap ----
     max_chars_per_line = max(15, int(width / (font_size * 0.9)))
     words = text.split()
     lines = []
@@ -120,17 +143,27 @@ def render_subtitle_png(text, output_path, font_path,
     total_h = len(lines) * line_h
     text_y = box_y + (blur_height - total_h) // 2
 
+    # ---- Colors ----
+    text_rgba = hex_to_rgba(text_color, 255)
+    outline_rgba = hex_to_rgba(outline_color, 255)
+
+    # ---- Draw Text ----
     for line in lines:
         bbox = draw.textbbox((0, 0), line, font=font)
         line_w = bbox[2] - bbox[0]
         line_x = (width - line_w) // 2
 
-        for dx in [-2, -1, 0, 1, 2]:
-            for dy in [-2, -1, 0, 1, 2]:
-                draw.text((line_x + dx, text_y + dy), line,
-                          font=font, fill=(0, 0, 0, 255))
-        draw.text((line_x, text_y), line, font=font, fill=(255, 255, 255, 255))
+        # Outline
+        if outline_width > 0:
+            for dx in range(-outline_width, outline_width + 1):
+                for dy in range(-outline_width, outline_width + 1):
+                    if dx == 0 and dy == 0:
+                        continue
+                    draw.text((line_x + dx, text_y + dy), line,
+                              font=font, fill=outline_rgba)
 
+        # Main Text
+        draw.text((line_x, text_y), line, font=font, fill=text_rgba)
         text_y += line_h
 
     img.save(output_path, "PNG")
@@ -211,7 +244,11 @@ def parse_srt(srt_path):
 def overlay_subtitle_on_video(video_path, srt_path, output_path,
                                 font_path, font_size=30,
                                 position="center", blur_height=120,
-                                blur_alpha=160):
+                                blur_alpha=160,
+                                text_color="#FFFFFF",
+                                outline_color="#000000",
+                                box_color="#000000",
+                                outline_width=2):
     W, H, duration = get_video_info(video_path)
 
     segments = parse_srt(srt_path)
@@ -233,7 +270,11 @@ def overlay_subtitle_on_video(video_path, srt_path, output_path,
             font_size=font_size,
             position=position,
             blur_height=blur_height,
-            blur_alpha=blur_alpha
+            blur_alpha=blur_alpha,
+            text_color=text_color,
+            outline_color=outline_color,
+            box_color=box_color,
+            outline_width=outline_width
         )
         png_files.append({
             "path": png_path,
@@ -391,7 +432,9 @@ def run_tts_chunked(text, output_path, ref_audio_path=None, progress_callback=No
     ).run(overwrite_output=True)
 
     return output_path
-    # ============================================================
+
+
+# ============================================================
 # UI
 # ============================================================
 st.set_page_config(page_title="🎬 VoxCPM2 Movie Recap", page_icon="🎬")
@@ -423,7 +466,6 @@ st.header("📝 Step 2: Script Paste")
 if "script_text" not in st.session_state:
     st.session_state.script_text = ""
 
-# ⚠️ — Text Area — Key မပါ
 script = st.text_area(
     "Script",
     value=st.session_state.script_text,
@@ -443,7 +485,9 @@ if st.button("🗑️  Script အားလုံး ဖျက်မယ်  🗑�
     st.rerun()
 st.markdown("---")
 
-# Step 3
+# ============================================================
+# Step 3: Reference Audio + Video
+# ============================================================
 st.header("🎙️ Step 3: Reference Audio + Video")
 if "ref_audio_path" not in st.session_state:
     st.session_state.ref_audio_path = None
@@ -458,7 +502,9 @@ if ref_audio is not None:
 
 video_file = st.file_uploader("📹 Video Upload", type=["mp4", "mov", "avi", "mkv"])
 
-# Subtitle Settings
+# ============================================================
+# Subtitle Settings (🎨 Colors + Sizes)
+# ============================================================
 st.header("📝 Subtitle Settings")
 use_subtitle = st.toggle("📝 စာတန်းထိုး (Burn-in)", value=True)
 
@@ -466,15 +512,81 @@ sub_position = DEFAULT_SUB_POSITION
 sub_font_size = DEFAULT_FONT_SIZE
 blur_height = DEFAULT_BLUR_HEIGHT
 blur_alpha = DEFAULT_BLUR_ALPHA
+text_color = DEFAULT_TEXT_COLOR
+outline_color = DEFAULT_OUTLINE_COLOR
+box_color = DEFAULT_BOX_COLOR
+outline_width = DEFAULT_OUTLINE_WIDTH
 
-st.info(
-    f"📍 နေရာ: **အလယ်** | "
-    f"🔤 Font Size: **{sub_font_size}** | "
-    f"⬛ Blur Box: **{blur_height}px** | "
-    f"🎨 Opacity: **{blur_alpha}**"
-)
+if use_subtitle:
+    col1, col2 = st.columns(2)
 
-# Preview
+    with col1:
+        st.markdown("**🎨 အရောင် ရွေးချယ်မှု**")
+        text_color = st.color_picker(
+            "🔤 စာသား အရောင်",
+            value=DEFAULT_TEXT_COLOR
+        )
+        outline_color = st.color_picker(
+            "✏️ ဘောင် အရောင်",
+            value=DEFAULT_OUTLINE_COLOR
+        )
+        box_color = st.color_picker(
+            "⬛ Blur Box အရောင်",
+            value=DEFAULT_BOX_COLOR
+        )
+
+    with col2:
+        st.markdown("**⚙️ Size Settings**")
+        sub_font_size = st.slider(
+            "🔤 Font Size", 16, 80, DEFAULT_FONT_SIZE
+        )
+        blur_height = st.slider(
+            "⬛ Blur Box အမြင့် (px)", 60, 300, DEFAULT_BLUR_HEIGHT
+        )
+        blur_alpha = st.slider(
+            "🎨 Opacity", 0, 255, DEFAULT_BLUR_ALPHA
+        )
+        outline_width = st.slider(
+            "✏️ ဘောင် အထူ", 0, 5, DEFAULT_OUTLINE_WIDTH
+        )
+
+    # ---- Live Color Preview ----
+    st.markdown("**🎨 Live Preview**")
+    outline_css = ""
+    if outline_width > 0:
+        outline_css = (
+            f"text-shadow: "
+            f"{outline_width}px {outline_width}px 0 {outline_color}, "
+            f"-{outline_width}px -{outline_width}px 0 {outline_color}, "
+            f"{outline_width}px -{outline_width}px 0 {outline_color}, "
+            f"-{outline_width}px {outline_width}px 0 {outline_color};"
+        )
+
+    st.markdown(
+        f"""
+        <div style='background:{box_color}; padding:25px;
+                    border-radius:10px; text-align:center;'>
+            <span style='color:{text_color};
+                         font-size:{sub_font_size}px;
+                         font-weight:bold;
+                         font-family:Pyidaungsu, Myanmar Text, sans-serif;
+                         {outline_css}'>
+                စာတန်းထိုး Preview
+            </span>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
+    st.info(
+        f"📍 နေရာ: **အလယ်** | "
+        f"🔤 Font Size: **{sub_font_size}** | "
+        f"⬛ Blur Box: **{blur_height}px** | "
+        f"🎨 Opacity: **{blur_alpha}** | "
+        f"✏️ Outline: **{outline_width}px**"
+    )
+
+# ---- Preview ----
 if video_file is not None and use_subtitle:
     st.subheader("🖼️ Preview")
     with st.spinner("🖼️ Preview..."):
@@ -494,7 +606,11 @@ if video_file is not None and use_subtitle:
             font_size=sub_font_size,
             position=sub_position,
             blur_height=blur_height,
-            blur_alpha=blur_alpha
+            blur_alpha=blur_alpha,
+            text_color=text_color,
+            outline_color=outline_color,
+            box_color=box_color,
+            outline_width=outline_width
         )
 
         cap = cv2.VideoCapture(temp_video_preview)
@@ -510,98 +626,4 @@ if video_file is not None and use_subtitle:
             pw = 720
             ph = int(H * (pw / W))
             composite.resize((pw, ph), Image.LANCZOS).convert("RGB").save("preview_result.png")
-            st.image("preview_result.png", caption="🖼️ Preview", use_container_width=True)
-
-# Sidebar
-st.sidebar.header("🎙️ TTS Spaces")
-for i, s in enumerate(VOXCPM_SPACES, 1):
-    st.sidebar.write(f"**{i}.** `{s['space']}`")
-
-# Step 4
-st.header("🚀 Step 4: Generate Recap")
-
-if st.button("✨ Generate Recap Video", type="primary"):
-    if not script.strip():
-        st.error("❌ Script paste — Step 2")
-        st.stop()
-    if video_file is None:
-        st.error("❌ Video Upload — Step 3")
-        st.stop()
-
-    with st.spinner("📹 Video — စစ်ဆေးနေသည်..."):
-        video_filename = "input_video.mp4"
-        video_file.seek(0)
-        with open(video_filename, "wb") as f:
-            f.write(video_file.read())
-        W, H, video_duration = get_video_info(video_filename)
-        st.write(f"📹 Video: {W}x{H} | Duration: {video_duration:.2f}s")
-
-    st.write("🎙️ VoxCPM2 → အသံ...")
-    progress_bar = st.progress(0)
-    status_text = st.empty()
-
-    def update_progress(i, total, chunk):
-        progress_bar.progress((i + 1) / total)
-        status_text.write(f"🎙️ [{i+1}/{total}] ({len(chunk)} စာလုံး)")
-
-    audio_path = "recap_voice.mp3"
-
-    try:
-        run_tts_chunked(script, audio_path,
-                        ref_audio_path=st.session_state.ref_audio_path,
-                        progress_callback=update_progress)
-        st.write("✅ အသံ ထုတ်ပြီး")
-        audio_dur = float(ffmpeg.probe(audio_path)['format']['duration'])
-        st.write(f"🎙️ Audio: {audio_dur:.1f}s")
-    except Exception as e:
-        st.error(f"❌ VoxCPM2 error: {e}")
-        st.stop()
-
-    tempo = audio_dur / video_duration
-    tempo = max(0.5, min(2.0, tempo))
-    st.write(f"⚡ Audio Speed: {tempo:.2f}x")
-
-    srt_path = None
-    if use_subtitle:
-        with st.spinner("📝 Script → SRT..."):
-            srt_path = script_to_srt(script, video_duration, "recap.srt")
-            if srt_path and os.path.exists(srt_path):
-                st.success("✅ SRT — ဖန်တီးပြီး")
-
-    with st.spinner("🎬 Recap Video Render..."):
-        temp_video = "temp_recap.mp4"
-        input_video = ffmpeg.input(video_filename)
-        input_audio = ffmpeg.input(audio_path).audio.filter('atempo', tempo)
-
-        stream = ffmpeg.output(
-            input_video.video, input_audio, temp_video,
-            vcodec='libx264', crf=18, preset='medium',
-            acodec='aac', audio_bitrate='192k',
-            shortest=None
-        )
-        ffmpeg.run(stream, overwrite_output=True)
-
-        final_path = "final_recap.mp4"
-
-        if use_subtitle and srt_path:
-            with st.spinner("📝 Subtitle Overlay — လုပ်နေသည်..."):
-                overlay_subtitle_on_video(
-                    video_path=temp_video,
-                    srt_path=srt_path,
-                    output_path=final_path,
-                    font_path=FONT_FILE,
-                    font_size=sub_font_size,
-                    position=sub_position,
-                    blur_height=blur_height,
-                    blur_alpha=blur_alpha
-                )
-                st.success("✅ Subtitle — Overlay ပြီး")
-        else:
-            shutil.copy(temp_video, final_path)
-
-    st.success("✅ ပြီးပါပြီ!")
-    st.video(final_path)
-
-    f = open(final_path, "rb")
-    st.download_button("📥 Recap Video Download", f, file_name="final_recap.mp4")
-    f.close()
+            st.image("preview_result.png", caption="🖼️ Preview
