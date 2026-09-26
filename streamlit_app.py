@@ -346,3 +346,174 @@ def tts_all(text, out, ref=None, cb=None):
         out, acodec="libmp3lame", audio_bitrate="192k", ar=48000
     ).run(overwrite_output=True)
     return out
+# ============================================================
+# Main UI
+# ============================================================
+st.markdown("<div class='main-title'>🎬 VoxCPM2 Recap</div>", unsafe_allow_html=True)
+st.markdown("<div class='main-sub'>Video → မြန်မာ Script → Recap Video</div>", unsafe_allow_html=True)
+
+st.divider()
+
+# ============================================================
+# Step 1 — Script
+# ============================================================
+st.subheader("📝 Step 1 — Gemini Web မှ Script")
+
+col1, col2 = st.columns([1, 1])
+with col1:
+    st.link_button("🌐 Open Gemini Web", "https://gemini.google.com", use_container_width=True)
+
+with st.expander("📋 Prompt — Copy လုပ်ပါ"):
+    st.code(
+        "Watch this video carefully and write a clear, continuous movie recap script "
+        "in Myanmar language for audio narration that matches the length of the video. "
+        "Return plain speech text only without markdown titles.",
+        language="text"
+    )
+
+st.divider()
+
+# ============================================================
+# Step 2 — Script Paste
+# ============================================================
+st.subheader("📝 Step 2 — Script Paste")
+
+if "script" not in st.session_state:
+    st.session_state.script = ""
+
+script = st.text_area(
+    "Script",
+    value=st.session_state.script,
+    height=220,
+    label_visibility="collapsed",
+    placeholder="မြန်မာ Script paste..."
+)
+st.session_state.script = script
+
+col1, col2 = st.columns([3, 1])
+with col1:
+    st.caption(f"📝 စာလုံး — {len(script):,}")
+with col2:
+    if st.button("🗑️ Clear", use_container_width=True):
+        st.session_state.script = ""
+        st.rerun()
+
+st.divider()
+# ============================================================
+# Step 3 — Upload
+# ============================================================
+st.subheader("📁 Step 3 — Reference Audio + Video")
+
+if "ref" not in st.session_state:
+    st.session_state.ref = None
+
+c1, c2 = st.columns(2)
+with c1:
+    ref = st.file_uploader("🎤 Ref Audio (Optional)", type=["wav", "mp3", "m4a"])
+    if ref:
+        with open("ref.wav", "wb") as f:
+            f.write(ref.read())
+        st.session_state.ref = "ref.wav"
+        st.success("✅ Ref Audio Ready")
+
+with c2:
+    vid = st.file_uploader("📹 Video Upload", type=["mp4", "mov", "avi", "mkv"])
+    if vid:
+        st.success(f"✅ Video — {vid.size / (1024*1024):.1f} MB")
+
+st.divider()
+
+# ============================================================
+# Step 4 — Subtitle Toggle (Slider မပါ)
+# ============================================================
+st.subheader("📝 Step 4 — Subtitle")
+
+use_sub = st.toggle("စာတန်းထိုး (Burn-in)", value=True)
+
+# ပုံသေ တန်ဖိုး — Slider မလိုဘူး
+fs = FIXED_FONT_SIZE     # 30
+bh = FIXED_BOX_HEIGHT    # 100
+ba = FIXED_OPACITY       # 100
+
+if use_sub:
+    st.caption(f"🔤 Font {fs}  •  ⬛ Box {bh}px  •  🎨 Opacity {ba}")
+
+# ============================================================
+# Preview
+# ============================================================
+if vid and use_sub:
+    st.markdown("**🖼️ Preview**")
+    with st.spinner("Preview ဖန်တီးနေသည်..."):
+        vid.seek(0)
+        with open("preview.mp4", "wb") as f:
+            f.write(vid.read())
+        W, H, _ = vid_info("preview.mp4")
+        render_png("စာတန်းထိုး Preview", "prev.png", FONT_FILE, W, H, fs, "center", bh, ba)
+        cap = cv2.VideoCapture("preview.mp4")
+        ok, fr = cap.read()
+        cap.release()
+        if ok:
+            bg = Image.fromarray(cv2.cvtColor(fr, cv2.COLOR_BGR2RGB)).convert("RGBA")
+            fg = Image.open("prev.png").convert("RGBA")
+            comp = Image.alpha_composite(bg, fg)
+            pw = 720
+            comp.resize((pw, int(H*(pw/W))), Image.LANCZOS).convert("RGB").save("prev_out.png")
+            st.image("prev_out.png", use_container_width=True)
+
+st.divider()
+
+# ============================================================
+# Step 5 — Generate
+# ============================================================
+st.subheader("🚀 Step 5 — Generate Recap")
+
+if st.button("✨ Generate Recap Video", type="primary", use_container_width=True):
+    if not script.strip():
+        st.error("Script paste လုပ်ပါ — Step 2")
+        st.stop()
+    if vid is None:
+        st.error("Video Upload တင်ပါ — Step 3")
+        st.stop()
+
+    vid.seek(0)
+    with open("input.mp4", "wb") as f:
+        f.write(vid.read())
+    _, _, vdur = vid_info("input.mp4")
+
+    pb = st.progress(0)
+    txt = st.empty()
+
+    def cb(i, tot, c):
+        pb.progress((i + 1) / tot)
+        txt.caption(f"[{i+1}/{tot}] {len(c)} စာလုံး")
+
+    try:
+        tts_all(script, "voice.mp3", st.session_state.ref, cb)
+    except Exception as e:
+        st.error(f"TTS Error — {e}")
+        st.stop()
+
+    adur = float(ffmpeg.probe("voice.mp3")['format']['duration'])
+    tempo = max(0.5, min(2.0, adur / vdur))
+
+    sp = None
+    if use_sub:
+        sp = scr_to_srt(script, vdur, "sub.srt")
+
+    with st.spinner("🎬 Rendering..."):
+        vi = ffmpeg.input("input.mp4")
+        va = ffmpeg.input("voice.mp3").audio.filter('atempo', tempo)
+        ffmpeg.output(vi.video, va, "temp.mp4",
+                       vcodec='libx264', crf=18, preset='medium',
+                       acodec='aac', audio_bitrate='192k', shortest=None
+                       ).run(overwrite_output=True)
+        if use_sub and sp:
+            overlay("temp.mp4", sp, "final.mp4", FONT_FILE, fs, "center", bh, ba)
+        else:
+            shutil.copy("temp.mp4", "final.mp4")
+
+    st.success(f"✅ Done — {adur:.0f}s @ {tempo:.2f}x")
+    st.video("final.mp4")
+
+    with open("final.mp4", "rb") as f:
+        st.download_button("📥 Download Recap Video", f, file_name="recap.mp4")
