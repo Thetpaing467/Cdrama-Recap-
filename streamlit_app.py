@@ -86,16 +86,19 @@ if not st.session_state.auth:
                 st.error("Password မှား")
     st.stop()
 
+
 def vid_info(p):
     pr = ffmpeg.probe(p)
     v = next(s for s in pr['streams'] if s['codec_type'] == 'video')
     return int(v['width']), int(v['height']), float(pr['format']['duration'])
+
 
 def t2s(s):
     ms = int(round((s - int(s)) * 1000)); tot = int(s)
     if ms >= 1000: tot += 1; ms = 0
     h, r = divmod(tot, 3600); m, sec = divmod(r, 60)
     return f"{h:02d}:{m:02d}:{sec:02d},{ms:03d}"
+
 
 def s2t(ts):
     ts = ts.strip()
@@ -104,6 +107,7 @@ def s2t(ts):
         h, mi, se, ms = m.groups()
         return int(h)*3600 + int(mi)*60 + int(se) + int(ms.ljust(3,'0'))/1000
     return None
+
 
 def render_png(text, out, fp, W, H, fs=30, pos_y=100, bh=100, ba=100,
                 box_width_ratio=BOX_WIDTH_RATIO,
@@ -151,6 +155,7 @@ def render_png(text, out, fp, W, H, fs=30, pos_y=100, bh=100, ba=100,
     img.save(out, "PNG")
     return out
 
+
 def scr_to_srt(scr, dur, path, mc=30):
     sents = [s.strip()+"။" for s in scr.replace("။","။|").split("|") if s.strip()]
     if not sents: return None
@@ -174,6 +179,7 @@ def scr_to_srt(scr, dur, path, mc=30):
             f.write(f"{i}\n{t2s(cur)} --> {t2s(cur+d)}\n{p}\n\n"); cur += d
     return path
 
+
 def parse_srt(path):
     with open(path, "r", encoding="utf-8") as f:
         raw = f.read().replace("\r\n","\n").replace("\r","\n")
@@ -190,6 +196,7 @@ def parse_srt(path):
         idx = ls.index(ts); txt = " ".join(ls[idx+1:]).strip()
         if txt: segs.append({"start": a, "end": b, "text": txt})
     return segs
+
 
 def overlay(vp, sp, op, fp, fs=30, pos_y=100, bh=100, ba=100,
             box_width_ratio=BOX_WIDTH_RATIO):
@@ -213,8 +220,7 @@ def overlay(vp, sp, op, fp, fs=30, pos_y=100, bh=100, ba=100,
     flt, cur = [], "[0:v]"
     for i, x in enumerate(pngs):
         lbl = f"[v{i}]"
-
-flt.append(f"{cur}[{i+1}:v]overlay=0:0:enable='between(t,{x['a']:.3f},{x['b']:.3f})'{lbl}")
+        flt.append(f"{cur}[{i+1}:v]overlay=0:0:enable='between(t,{x['a']:.3f},{x['b']:.3f})'{lbl}")
         cur = lbl
     cmd += ["-filter_complex",";".join(flt),"-map",cur,"-map","0:a?",
             "-c:v","libx264","-crf",str(ENC_CRF),"-preset",ENC_PRESET,
@@ -225,6 +231,7 @@ flt.append(f"{cur}[{i+1}:v]overlay=0:0:enable='between(t,{x['a']:.3f},{x['b']:.3
         try: os.remove(x["p"])
         except: pass
     return op
+
 
 def split_scr(t, mc=TTS_CHUNK):
     sents = [s.strip()+"။" for s in t.replace("။","။|").split("|") if s.strip()]
@@ -239,6 +246,7 @@ def split_scr(t, mc=TTS_CHUNK):
             else: cur = s
     if cur: out.append(cur)
     return out
+
 
 def video_bypass(input_video, output_video="bypass.mp4",
                  crop_ratio=0.90, mirror=True):
@@ -271,6 +279,7 @@ def video_bypass(input_video, output_video="bypass.mp4",
         raise Exception(f"FFmpeg: {(r.stderr or '')[-300:]}")
     return output_video
 
+
 def tts_demo(chunks, ref, space, cb=None):
     cl = Client(space); files = []; rf = handle_file(ref) if ref else None
     for i, c in enumerate(chunks):
@@ -287,6 +296,7 @@ def tts_demo(chunks, ref, space, cb=None):
         dst = f"chunk_{i}.wav"; shutil.copy(p, dst); files.append(dst)
     return files
 
+
 def tts_burmese(chunks, ref, space, cb=None):
     cl = Client(space); files = []
     if not ref: raise Exception("Reference Audio needed")
@@ -302,9 +312,11 @@ def tts_burmese(chunks, ref, space, cb=None):
         dst = f"chunk_b_{i}.wav"; shutil.copy(p, dst); files.append(dst)
     return files
 
+
 async def _edge_tts_async(text, out_file, voice):
     communicate = edge_tts.Communicate(text, voice)
     await communicate.save(out_file)
+
 
 def edge_tts_run(chunks, out_path, cb=None, workers=TTS_WORKERS):
     voice_id = EDGE_VOICES[EDGE_VOICE_FIXED]
@@ -320,7 +332,7 @@ def edge_tts_run(chunks, out_path, cb=None, workers=TTS_WORKERS):
             loop.close()
         return (i, dst)
 
-results = [None] * len(chunks); done = 0
+    results = [None] * len(chunks); done = 0
     with concurrent.futures.ThreadPoolExecutor(max_workers=workers) as ex:
         for idx, dst in ex.map(tts_one, enumerate(chunks)):
             results[idx] = dst; done += 1
@@ -333,6 +345,7 @@ results = [None] * len(chunks); done = 0
         out_path, acodec="libmp3lame", audio_bitrate=AUDIO_BITRATE, ar=48000
     ).run(overwrite_output=True)
     return out_path
+
 
 def tts_all(text, out, ref=None, cb=None, use_voxcpm=True):
     chunks = split_scr(text, TTS_CHUNK)
@@ -374,6 +387,7 @@ def tts_all(text, out, ref=None, cb=None, use_voxcpm=True):
     ).run(overwrite_output=True)
     return out
 
+
 def whisper_fast(video_path):
     subprocess.run([
         "ffmpeg", "-y", "-i", video_path,
@@ -403,6 +417,7 @@ def whisper_fast(video_path):
             speech_segments.append((seg["start"], seg["end"]))
     return speech_segments
 
+
 def silence_cut_v2(input_video, output_video="input_cut.mp4"):
     t0 = time.time()
     speech_segments = whisper_fast(input_video)
@@ -423,7 +438,6 @@ def silence_cut_v2(input_video, output_video="input_cut.mp4"):
 
     total = sum(e - s for s, e in speech_segments)
     return {"segments": len(speech_segments), "duration": total, "whisper_time": whisper_time}
-
 st.markdown("<div class='main-title'>🎬 Myanmar TTS Recap</div>", unsafe_allow_html=True)
 st.markdown("<div class='main-sub'>Video → Script → VoxCPM2 / Edge TTS သီဟ → Recap</div>", unsafe_allow_html=True)
 st.divider()
@@ -453,7 +467,7 @@ if use_sub:
     pos_y = st.slider("📍 Position", 0, 100, 100, 1)
 
 if vid and use_sub:
-    st.markdown("🖼️ Preview")
+    st.markdown("**🖼️ Preview**")
     with st.spinner("Preview..."):
         vid.seek(0)
         with open("preview.mp4", "wb") as f: f.write(vid.read())
@@ -524,8 +538,7 @@ if st.button("✨ Generate Recap Video", type="primary", use_container_width=Tru
 
     # ၃။ Video + Audio
     t0 = time.time()
-
-with st.spinner("🎬 Render Base..."):
+    with st.spinner("🎬 Render Base..."):
         vi = ffmpeg.input("input.mp4")
         va = ffmpeg.input("voice.mp3").audio.filter('atempo', tempo)
         ffmpeg.output(vi.video, va, "temp.mp4",
